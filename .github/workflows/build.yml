@@ -60,3 +60,26 @@ jobs:
           name: PartyTracker-build-log
           path: xcodebuild.log
           if-no-files-found: ignore
+
+      - name: Render layout on iPhone simulator
+        run: |
+          set -euo pipefail
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import sys,json; print(next(d["udid"] for ds in json.load(sys.stdin)["devices"].values() for d in ds if d["name"].startswith("iPhone")))')
+          xcrun simctl boot "$DEVICE"
+          xcrun simctl bootstatus "$DEVICE" -b
+          xcodebuild -project PartyTracker.xcodeproj -scheme PartyTracker -configuration Debug -sdk iphonesimulator -destination "id=$DEVICE" -derivedDataPath simulator-build CODE_SIGNING_ALLOWED=NO build > simulator-build.log 2>&1
+          xcrun simctl install "$DEVICE" simulator-build/Build/Products/Debug-iphonesimulator/PartyTracker.app
+          xcrun simctl status_bar "$DEVICE" override --time "9:41" --batteryState charged --batteryLevel 100
+          xcrun simctl launch "$DEVICE" com.jk.partytracker --visual-check
+          sleep 5
+          xcrun simctl io "$DEVICE" screenshot widget-layout.png
+
+      - name: Upload rendered layout
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PartyTracker-layout
+          path: |
+            widget-layout.png
+            simulator-build.log
+          if-no-files-found: ignore
