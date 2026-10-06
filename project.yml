@@ -24,6 +24,8 @@ targets:
       path: PartyTrackerApp/Info.plist
       properties:
         CFBundleDisplayName: Party Tracker
+        CFBundleShortVersionString: "1.1"
+        CFBundleVersion: "2"
         UILaunchScreen: {}
     settings:
       base:
@@ -41,6 +43,8 @@ targets:
       path: PartyTrackerWidget/Info.plist
       properties:
         CFBundleDisplayName: Party Tracker
+        CFBundleShortVersionString: "1.1"
+        CFBundleVersion: "2"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
