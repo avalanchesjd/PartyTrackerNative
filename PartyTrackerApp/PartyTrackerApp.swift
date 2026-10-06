@@ -1,10 +1,12 @@
 import SwiftUI
+import WidgetKit
 
 @main
 struct PartyTrackerApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onAppear { TrackerStore.refreshWidget() }
         }
     }
 }
