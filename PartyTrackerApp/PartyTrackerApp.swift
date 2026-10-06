@@ -5,8 +5,27 @@ import WidgetKit
 struct PartyTrackerApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .onAppear { TrackerStore.refreshWidget() }
+            Group {
+                #if DEBUG
+                if ProcessInfo.processInfo.arguments.contains("--visual-check") {
+                    VStack(spacing: 24) {
+                        Text("158 pt / 170 pt").foregroundStyle(.white)
+                        HStack(spacing: 12) {
+                            StaticPreviewCard().frame(width: 158, height: 158)
+                            StaticPreviewCard().frame(width: 170, height: 170)
+                        }
+                        StaticPreviewCard().frame(width: 300, height: 300)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color(red: 0.025, green: 0.045, blue: 0.075))
+                } else {
+                    ContentView()
+                }
+                #else
+                ContentView()
+                #endif
+            }
+            .onAppear { TrackerStore.refreshWidget() }
         }
     }
 }
