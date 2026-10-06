@@ -1,15 +1,38 @@
 import SwiftUI
 import AppIntents
+import UIKit
 
 struct PartyPalette {
-    static let panelTop = Color(red: 0.075, green: 0.115, blue: 0.165)
-    static let panelBottom = Color(red: 0.028, green: 0.050, blue: 0.082)
-    static let control = Color(red: 0.095, green: 0.135, blue: 0.185)
-    static let controlEdge = Color.white.opacity(0.11)
-    static let secondary = Color(red: 0.56, green: 0.64, blue: 0.74)
-    static let separator = Color.white.opacity(0.13)
+    static let panelTop = Color(red: 0.14, green: 0.19, blue: 0.25)
+    static let panelBottom = Color(red: 0.055, green: 0.075, blue: 0.10)
+    static let secondary = Color(red: 0.48, green: 0.54, blue: 0.62)
     static let amber = Color(red: 0.94, green: 0.62, blue: 0.16)
     static let red = Color(red: 0.95, green: 0.28, blue: 0.28)
+}
+
+struct PartyPanelBackground: View {
+    var body: some View {
+        LinearGradient(colors: [PartyPalette.panelTop, PartyPalette.panelBottom,
+                                Color(red: 0.08, green: 0.105, blue: 0.145)],
+                       startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
+}
+
+// The exact illustrated wells from the supplied reference. Only small,
+// independently rasterized images reach SwiftUI, not the full reference.
+private enum ReferenceArt {
+    static let wells: [UIImage] = {
+        guard let source = UIImage(named: "PartyReference")?.cgImage else { return [] }
+        return [CGRect(x: 337, y: 466, width: 142, height: 150),
+                CGRect(x: 337, y: 700, width: 142, height: 151)].compactMap { rect in
+            guard let crop = source.cropping(to: rect) else { return nil }
+            let format = UIGraphicsImageRendererFormat()
+            format.scale = 1
+            return UIGraphicsImageRenderer(size: rect.size, format: format).image { _ in
+                UIImage(cgImage: crop).draw(in: CGRect(origin: .zero, size: rect.size))
+            }
+        }
+    }()
 }
 
 struct PartyTrackerCard: View {
@@ -20,287 +43,114 @@ struct PartyTrackerCard: View {
     let interactive: Bool
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [PartyPalette.panelTop, PartyPalette.panelBottom],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(Color.white.opacity(0.16), lineWidth: 1)
-
-            VStack(spacing: 0) {
-                header
-                    .frame(height: 34)
-
-                Spacer(minLength: 4)
-
-                TrackerRow(
-                    title: "Shoty",
-                    current: shots,
-                    limit: shotLimit,
-                    icon: AnyView(ShotGlassIcon()),
-                    minusIntent: DecrementShotsIntent(),
-                    plusIntent: IncrementShotsIntent(),
-                    interactive: interactive
-                )
-
-                Divider()
-                    .overlay(PartyPalette.separator)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 8)
-
-                TrackerRow(
-                    title: "Piwa",
-                    current: beers,
-                    limit: beerLimit,
-                    icon: AnyView(BeerMugIcon()),
-                    minusIntent: DecrementBeersIntent(),
-                    plusIntent: IncrementBeersIntent(),
-                    interactive: interactive
-                )
-            }
-            .padding(15)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-    }
-
-    private var header: some View {
-        HStack {
-            Text("P A R T Y")
-                .font(.system(size: 10, weight: .semibold, design: .rounded))
-                .foregroundStyle(Color.white.opacity(0.78))
-
-            Spacer()
-
-            if interactive {
-                Button(intent: ResetTrackerIntent()) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.counterclockwise")
-                            .font(.system(size: 11, weight: .semibold))
-                        Text("Reset")
-                            .font(.system(size: 10, weight: .medium, design: .rounded))
-                    }
-                    .foregroundStyle(Color.white.opacity(0.66))
+        GeometryReader { geometry in
+            let s = geometry.size.width / 344
+            let v = geometry.size.height / 324
+            ZStack(alignment: .topLeading) {
+                PartyPanelBackground()
+                RoundedRectangle(cornerRadius: 49 * s, style: .continuous)
+                    .strokeBorder(LinearGradient(colors: [.white.opacity(0.34), .white.opacity(0.05), .white.opacity(0.10)],
+                                                 startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: s)
+                Text("PARTY")
+                    .font(.system(size: 18 * s, weight: .semibold))
+                    .tracking(3.3 * s)
+                    .foregroundStyle(Color(red: 0.76, green: 0.80, blue: 0.86))
+                    .position(x: 68 * s, y: 45 * v)
+                if interactive {
+                    Button(intent: ResetTrackerIntent()) { resetLabel(s) }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Wyzeruj liczniki")
+                        .position(x: 278 * s, y: 45 * v)
+                } else {
+                    resetLabel(s).position(x: 278 * s, y: 45 * v)
                 }
-                .buttonStyle(.plain)
-            } else {
-                HStack(spacing: 4) {
-                    Image(systemName: "arrow.counterclockwise")
-                        .font(.system(size: 11, weight: .semibold))
-                    Text("Reset")
-                        .font(.system(size: 10, weight: .medium, design: .rounded))
-                }
-                .foregroundStyle(Color.white.opacity(0.66))
+                row(title: "Shoty", value: shots, limit: shotLimit, art: 0, s: s,
+                    minus: DecrementShotsIntent(), plus: IncrementShotsIntent())
+                    .position(x: 173 * s, y: 123 * v)
+                Rectangle().fill(Color.white.opacity(0.12))
+                    .frame(width: 291 * s, height: s)
+                    .position(x: 171.5 * s, y: 181 * v)
+                row(title: "Piwa", value: beers, limit: beerLimit, art: 1, s: s,
+                    minus: DecrementBeersIntent(), plus: IncrementBeersIntent())
+                    .position(x: 173 * s, y: 240 * v)
             }
+            .clipShape(RoundedRectangle(cornerRadius: 49 * s, style: .continuous))
         }
     }
-}
 
-private struct TrackerRow<MinusIntent: AppIntent, PlusIntent: AppIntent>: View {
-    let title: String
-    let current: Int
-    let limit: Int
-    let icon: AnyView
-    let minusIntent: MinusIntent
-    let plusIntent: PlusIntent
-    let interactive: Bool
+    private func resetLabel(_ s: CGFloat) -> some View {
+        HStack(spacing: 9 * s) {
+            Image(systemName: "arrow.counterclockwise")
+                .font(.system(size: 20 * s, weight: .regular))
+            Text("Reset").font(.system(size: 16 * s))
+        }
+        .foregroundStyle(Color(red: 0.60, green: 0.65, blue: 0.72))
+        .frame(width: 83 * s, height: 32 * s)
+        .contentShape(Rectangle())
+    }
 
-    var body: some View {
-        HStack(spacing: 10) {
-            iconWell
-
-            VStack(alignment: .leading, spacing: 1) {
+    private func row<M: AppIntent, P: AppIntent>(title: String, value: Int, limit: Int,
+                                                art: Int, s: CGFloat, minus: M, plus: P) -> some View {
+        HStack(spacing: 0) {
+            Group {
+                if ReferenceArt.wells.indices.contains(art) {
+                    Image(uiImage: ReferenceArt.wells[art]).resizable().interpolation(.high)
+                } else {
+                    Image(systemName: art == 0 ? "wineglass" : "mug").resizable().scaledToFit()
+                        .padding(14 * s).foregroundStyle(.white)
+                }
+            }
+            .frame(width: 71 * s, height: 75 * s)
+            .clipShape(RoundedRectangle(cornerRadius: 18 * s, style: .continuous))
+            Spacer().frame(width: 10 * s)
+            VStack(alignment: .leading, spacing: 4 * s) {
                 Text(title)
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color.white.opacity(0.82))
-
-                HStack(alignment: .firstTextBaseline, spacing: 3) {
-                    Text("\(current)")
-                        .font(.system(size: 23, weight: .bold, design: .rounded))
-                        .foregroundStyle(valueColor)
-
+                    .font(.system(size: 20 * s))
+                    .foregroundStyle(Color(red: 0.78, green: 0.81, blue: 0.86))
+                HStack(alignment: .firstTextBaseline, spacing: 5 * s) {
+                    Text("\(value)")
+                        .font(.system(size: 36 * s, weight: .semibold))
+                        .foregroundStyle(value > limit ? PartyPalette.red : (value == limit ? PartyPalette.amber : .white))
                     Text("/ \(limit)")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .font(.system(size: 28 * s, weight: .medium))
                         .foregroundStyle(PartyPalette.secondary)
                 }
+                .minimumScaleFactor(0.65)
             }
+            .lineLimit(1)
+            .frame(width: 88 * s, alignment: .leading)
+            Spacer().frame(width: 6 * s)
+            if interactive {
+                Button(intent: minus) { control("minus", s) }
+                    .accessibilityLabel("\(title): odejmij jeden")
+                Spacer().frame(width: 13 * s)
+                Button(intent: plus) { control("plus", s) }
+                    .accessibilityLabel("\(title): dodaj jeden")
+            } else {
+                control("minus", s)
+                Spacer().frame(width: 13 * s)
+                control("plus", s)
+            }
+        }
+        .buttonStyle(.plain)
+        .frame(width: 296 * s, height: 75 * s)
+    }
 
-            Spacer(minLength: 2)
-
-            HStack(spacing: 7) {
-                if interactive {
-                    Button(intent: minusIntent) {
-                        ControlSurface(symbol: "minus")
+    private func control(_ symbol: String, _ s: CGFloat) -> some View {
+        Image(systemName: symbol)
+            .font(.system(size: 29 * s, weight: .medium))
+            .foregroundStyle(Color(red: 0.91, green: 0.93, blue: 0.96))
+            .frame(width: 54 * s, height: 56 * s)
+            .background {
+                RoundedRectangle(cornerRadius: 15 * s, style: .continuous)
+                    .fill(LinearGradient(colors: [Color(red: 0.19, green: 0.24, blue: 0.29),
+                                                  Color(red: 0.09, green: 0.13, blue: 0.17)],
+                                         startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 15 * s, style: .continuous)
+                            .strokeBorder(LinearGradient(colors: [.white.opacity(0.32), .white.opacity(0.04)],
+                                                         startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: s)
                     }
-                    .buttonStyle(.plain)
-
-                    Button(intent: plusIntent) {
-                        ControlSurface(symbol: "plus")
-                    }
-                    .buttonStyle(.plain)
-                } else {
-                    ControlSurface(symbol: "minus")
-                    ControlSurface(symbol: "plus")
-                }
             }
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    private var iconWell: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 13, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.075),
-                            Color.white.opacity(0.025)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-
-            RoundedRectangle(cornerRadius: 13, style: .continuous)
-                .stroke(Color.white.opacity(0.11), lineWidth: 0.8)
-
-            icon
-                .padding(8)
-        }
-        .frame(width: 42, height: 42)
-    }
-
-    private var valueColor: Color {
-        if current > limit { return PartyPalette.red }
-        if current == limit { return PartyPalette.amber }
-        return .white
-    }
-}
-
-private struct ControlSurface: View {
-    let symbol: String
-
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 11, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            PartyPalette.control.opacity(0.96),
-                            PartyPalette.control.opacity(0.68)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-
-            RoundedRectangle(cornerRadius: 11, style: .continuous)
-                .stroke(PartyPalette.controlEdge, lineWidth: 0.8)
-
-            Image(systemName: symbol)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Color.white.opacity(0.9))
-        }
-        .frame(width: 32, height: 32)
-    }
-}
-
-struct ShotGlassIcon: View {
-    var body: some View {
-        GeometryReader { geo in
-            let w = geo.size.width
-            let h = geo.size.height
-
-            ZStack {
-                Path { path in
-                    path.move(to: CGPoint(x: w * 0.24, y: h * 0.14))
-                    path.addLine(to: CGPoint(x: w * 0.76, y: h * 0.14))
-                    path.addLine(to: CGPoint(x: w * 0.66, y: h * 0.84))
-                    path.addQuadCurve(
-                        to: CGPoint(x: w * 0.34, y: h * 0.84),
-                        control: CGPoint(x: w * 0.50, y: h * 0.92)
-                    )
-                    path.closeSubpath()
-                }
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.20),
-                            Color.white.opacity(0.045)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-
-                Path { path in
-                    path.move(to: CGPoint(x: w * 0.24, y: h * 0.14))
-                    path.addLine(to: CGPoint(x: w * 0.76, y: h * 0.14))
-                    path.addLine(to: CGPoint(x: w * 0.66, y: h * 0.84))
-                    path.addQuadCurve(
-                        to: CGPoint(x: w * 0.34, y: h * 0.84),
-                        control: CGPoint(x: w * 0.50, y: h * 0.92)
-                    )
-                    path.closeSubpath()
-                }
-                .stroke(Color.white.opacity(0.72), lineWidth: 1.4)
-
-                Capsule()
-                    .fill(Color.white.opacity(0.75))
-                    .frame(width: w * 0.42, height: 1.4)
-                    .offset(y: h * 0.29)
-            }
-        }
-        .aspectRatio(1, contentMode: .fit)
-    }
-}
-
-struct BeerMugIcon: View {
-    var body: some View {
-        GeometryReader { geo in
-            let w = geo.size.width
-            let h = geo.size.height
-
-            ZStack {
-                RoundedRectangle(cornerRadius: w * 0.10, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                PartyPalette.amber.opacity(0.94),
-                                PartyPalette.amber.opacity(0.58)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .frame(width: w * 0.52, height: h * 0.58)
-                    .offset(x: -w * 0.06, y: h * 0.10)
-
-                RoundedRectangle(cornerRadius: w * 0.10, style: .continuous)
-                    .stroke(Color.white.opacity(0.72), lineWidth: 1.3)
-                    .frame(width: w * 0.52, height: h * 0.60)
-                    .offset(x: -w * 0.06, y: h * 0.10)
-
-                RoundedRectangle(cornerRadius: w * 0.12, style: .continuous)
-                    .stroke(Color.white.opacity(0.68), lineWidth: 1.5)
-                    .frame(width: w * 0.26, height: h * 0.34)
-                    .offset(x: w * 0.27, y: h * 0.12)
-
-                HStack(spacing: -2) {
-                    Circle()
-                    Circle()
-                    Circle()
-                }
-                .foregroundStyle(Color.white.opacity(0.90))
-                .frame(width: w * 0.54, height: h * 0.18)
-                .offset(x: -w * 0.06, y: -h * 0.23)
-            }
-        }
-        .aspectRatio(1, contentMode: .fit)
     }
 }
