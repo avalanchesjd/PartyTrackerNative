@@ -1,0 +1,63 @@
+name: PartyTracker
+options:
+  minimumXcodeGenVersion: 2.41.0
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: 5.0
+    IPHONEOS_DEPLOYMENT_TARGET: 17.0
+
+targets:
+  PartyTracker:
+    type: application
+    platform: iOS
+    sources:
+      - path: PartyTrackerApp
+      - path: Shared
+    dependencies:
+      - target: PartyTrackerWidget
+        embed: true
+    info:
+      path: PartyTrackerApp/Info.plist
+      properties:
+        CFBundleDisplayName: Party Tracker
+        UILaunchScreen: {}
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jk.partytracker
+        PRODUCT_NAME: PartyTracker
+        TARGETED_DEVICE_FAMILY: "1"
+
+  PartyTrackerWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: PartyTrackerWidget
+      - path: Shared
+    info:
+      path: PartyTrackerWidget/Info.plist
+      properties:
+        CFBundleDisplayName: Party Tracker
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jk.partytracker.widget
+        PRODUCT_NAME: PartyTrackerWidget
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+        TARGETED_DEVICE_FAMILY: "1"
+
+schemes:
+  PartyTracker:
+    build:
+      targets:
+        PartyTracker: all
+        PartyTrackerWidget: all
+    run:
+      config: Debug
+    archive:
+      config: Release
