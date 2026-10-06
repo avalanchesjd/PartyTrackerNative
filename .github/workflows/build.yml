@@ -1,0 +1,62 @@
+name: Build unsigned IPA
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build for iPhone without signing
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project PartyTracker.xcodeproj \
+            -scheme PartyTracker \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build | tee xcodebuild.log
+
+      - name: Package unsigned IPA
+        run: |
+          test -d build/Build/Products/Release-iphoneos/PartyTracker.app
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/PartyTracker.app Payload/
+          /usr/bin/zip -qry PartyTracker-unsigned.ipa Payload
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: PartyTracker-unsigned
+          path: PartyTracker-unsigned.ipa
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PartyTracker-build-log
+          path: xcodebuild.log
+          if-no-files-found: ignore
